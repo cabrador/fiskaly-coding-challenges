@@ -1,14 +1,8 @@
 package persistence
 
 import (
-	"errors"
 	"github.com/fiskaly/coding-challenges/signing-service-challenge/types"
 	"sync"
-)
-
-var (
-	ErrDeviceNotFound      = errors.New("device with given ID does not exist")
-	ErrDeviceAlreadyExists = errors.New("device with given ID already exist")
 )
 
 func NewInMemoryDatabase() *InMemoryDatabase {
@@ -31,7 +25,7 @@ func (d *InMemoryDatabase) GetSignatureDevice(id string) (*types.SignatureDevice
 	if exists {
 		return device, nil
 	}
-	return nil, ErrDeviceNotFound
+	return nil, types.ErrDeviceNotFound
 }
 
 func (d *InMemoryDatabase) CreateSignatureDevice(device *types.SignatureDevice) error {
@@ -40,7 +34,7 @@ func (d *InMemoryDatabase) CreateSignatureDevice(device *types.SignatureDevice) 
 	// We must not overwrite an existing device.
 	_, exists := d.db[device.ID]
 	if exists {
-		return ErrDeviceAlreadyExists
+		return types.ErrDeviceAlreadyExists
 	}
 	d.db[device.ID] = device
 	return nil
@@ -50,7 +44,7 @@ func (d *InMemoryDatabase) UpdateSignatureDevice(updatedDevice *types.SignatureD
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if _, exist := d.db[updatedDevice.ID]; !exist {
-		return ErrDeviceNotFound
+		return types.ErrDeviceNotFound
 	}
 	d.db[updatedDevice.ID] = updatedDevice
 	return nil
@@ -76,7 +70,7 @@ func (d *InMemoryDatabase) GetDeviceSignatures(id string) ([][]byte, error) {
 	device, exists := d.db[id]
 	d.lock.Unlock()
 	if !exists {
-		return nil, ErrDeviceNotFound
+		return nil, types.ErrDeviceNotFound
 	}
 	if len(device.PreviousSignatures) == 0 {
 		return [][]byte{}, nil

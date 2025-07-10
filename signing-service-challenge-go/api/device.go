@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fiskaly/coding-challenges/signing-service-challenge/persistence"
 	"github.com/fiskaly/coding-challenges/signing-service-challenge/types"
 	"io"
 	"net/http"
@@ -38,7 +37,17 @@ func (s *Server) CreateSignatureDevice(response http.ResponseWriter, request *ht
 		Label:     unmarshalled.Label,
 	})
 	if err != nil {
-		WriteInternalError(response, request.URL.Path, err)
+		if errors.Is(err, types.ErrUnknownSigningAlgorithm) {
+			WriteErrorResponse(response, http.StatusBadRequest, []string{
+				err.Error(),
+			})
+		} else if errors.Is(err, types.ErrDeviceAlreadyExists) {
+			WriteErrorResponse(response, http.StatusConflict, []string{
+				err.Error(),
+			})
+		} else {
+			WriteInternalError(response, request.URL.Path, err)
+		}
 		return
 	}
 	WriteAPIResponse(response, http.StatusCreated, device)
@@ -72,9 +81,9 @@ func (s *Server) SignTransaction(response http.ResponseWriter, request *http.Req
 	}
 	signature, signedData, err := s.deviceService.SignUsingDevice(unmarshalled.DeviceID, []byte(unmarshalled.DataToBeSigned))
 	if err != nil {
-		if errors.Is(err, persistence.ErrDeviceNotFound) {
+		if errors.Is(err, types.ErrDeviceNotFound) {
 			WriteErrorResponse(response, http.StatusNotFound, []string{
-				persistence.ErrDeviceNotFound.Error(),
+				err.Error(),
 			})
 
 		} else {
@@ -108,11 +117,10 @@ func (s *Server) DeviceSignatures(response http.ResponseWriter, request *http.Re
 	}
 	signatures, err := s.deviceService.GetDeviceSignatures(request.PathValue("id"))
 	if err != nil {
-		if errors.Is(err, persistence.ErrDeviceNotFound) {
+		if errors.Is(err, types.ErrDeviceNotFound) {
 			WriteErrorResponse(response, http.StatusNotFound, []string{
-				persistence.ErrDeviceNotFound.Error(),
+				err.Error(),
 			})
-
 		} else {
 			WriteInternalError(response, request.URL.Path, err)
 		}

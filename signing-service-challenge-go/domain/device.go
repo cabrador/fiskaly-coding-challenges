@@ -31,7 +31,7 @@ func (d *DeviceService) Get(id string) (*types.SignatureDevice, error) {
 // Create adds a new device to the database.
 func (d *DeviceService) Create(device types.NewSignatureDevice) (*types.SignatureDevice, error) {
 	if !types.IsAllowedSigningAlgorithm(types.SigningAlgorithm(device.Algorithm)) {
-		return nil, fmt.Errorf("unsupported signing algorithm: %s", device.Algorithm)
+		return nil, fmt.Errorf("%w: %s", types.ErrUnknownSigningAlgorithm, device.Algorithm)
 	}
 
 	// The probability of hitting an existing UUID is close to zero
