@@ -13,32 +13,32 @@ func Test_DeviceService_CreateNewSignatureDevice(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	testErr := errors.New("error")
 	tests := []struct {
-		name             string
-		algorithm        string
-		expectedErrorMsg string
-		setup            func(*MockDatabase)
+		name          string
+		algorithm     string
+		expectedError error
+		setup         func(*MockDatabase)
 	}{
 		{
-			name:             "Unknown Algorithm",
-			algorithm:        "Unknown",
-			expectedErrorMsg: "unsupported signing algorithm: Unknown",
+			name:          "Unknown Algorithm",
+			algorithm:     "Unknown",
+			expectedError: types.ErrUnknownSigningAlgorithm,
 			setup: func(*MockDatabase) {
 				// this test case returns early - no setup
 			},
 		},
 		{
-			name:             "Db Error",
-			algorithm:        "ECC",
-			expectedErrorMsg: "error",
+			name:          "Db Error",
+			algorithm:     "ECC",
+			expectedError: testErr,
 			setup: func(db *MockDatabase) {
-				db.EXPECT().CreateSignatureDevice(gomock.Any()).Return(errors.New("error"))
+				db.EXPECT().CreateSignatureDevice(gomock.Any()).Return(testErr)
 			},
 		},
 		{
-			name:             "Successful Creation",
-			algorithm:        "RSA",
-			expectedErrorMsg: "",
+			name:      "Successful Creation",
+			algorithm: "RSA",
 			setup: func(db *MockDatabase) {
 				db.EXPECT().CreateSignatureDevice(gomock.Any()).Return(nil)
 			},
@@ -53,12 +53,12 @@ func Test_DeviceService_CreateNewSignatureDevice(t *testing.T) {
 				Algorithm: test.algorithm,
 				Label:     "Label",
 			})
-			if test.expectedErrorMsg != "" {
+			if test.expectedError != nil {
 				if err == nil {
-					t.Fatalf("expected error %q, got nil", test.expectedErrorMsg)
+					t.Fatalf("expected error %q, got nil", test.expectedError)
 				}
-				if !strings.Contains(err.Error(), test.expectedErrorMsg) {
-					t.Fatalf("expected error %q, got %q", test.expectedErrorMsg, err.Error())
+				if !errors.Is(err, test.expectedError) {
+					t.Fatalf("expected error %q, got %q", test.expectedError, err.Error())
 				}
 
 			} else {
@@ -164,7 +164,7 @@ func Test_DeviceService_SignUsingDevice(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			db := NewMockDatabase(ctrl)
 			db.EXPECT().GetSignatureDevice("valid-id").Return(&test.device, nil)
-			db.EXPECT().GetSignatureDevice(gomock.Any()).Return(nil)
+			db.EXPECT().UpdateSignatureDevice(gomock.Any()).Return(nil)
 			deviceService := NewDeviceService(db)
 
 			signature, signedData, err := deviceService.SignUsingDevice("valid-id", []byte("test data"))

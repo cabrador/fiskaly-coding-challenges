@@ -55,7 +55,7 @@ func (d *DeviceService) Create(device types.NewSignatureDevice) (*types.Signatur
 	}
 
 	if err = d.db.CreateSignatureDevice(newDevice); err != nil {
-		return nil, fmt.Errorf("failed to save device into the db: %v", err)
+		return nil, fmt.Errorf("failed to save device into the db: %w", err)
 	}
 
 	return newDevice, nil
